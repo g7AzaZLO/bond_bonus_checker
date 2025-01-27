@@ -1,5 +1,6 @@
 import asyncio
 from datetime import datetime
+import logging
 
 from aiogram import Bot
 from settings import dp, bot, BOND_API
@@ -13,12 +14,16 @@ dp.include_router(standart_router)
 dp.include_router(channels_router)
 dp.include_router(bonds_router)
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 async def notify_users(api_url, bot: Bot):
     while True:
-        print(str(datetime.utcnow()) + " Checking for users...")
-        notifications = get_users_to_notify(api_url)
-        for user_id, bond_index, bonus in notifications:
-            await bot.send_message(user_id, f"Бонд {bond_index} достиг бонуса {bonus}.")
+        logger.info(f"{datetime.utcnow()} Checking for users...")
+        notifications = await get_users_to_notify(api_url)
+        if notifications:
+            for user_id, bond_index, bonus in notifications:
+                await bot.send_message(user_id, f"Бонд {bond_index} достиг бонуса {bonus}.")
         await asyncio.sleep(600)
 
 async def main():
@@ -27,5 +32,5 @@ async def main():
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    init_db()
+    asyncio.run(init_db())
     asyncio.run(main())

@@ -1,8 +1,12 @@
 import sqlite3
-
+import aiohttp
+import aiosqlite
 import requests
-
+import logging
 from db.database import DB_PATH
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def get_bonus_for_bond_index(api_url, target_index):
@@ -27,43 +31,34 @@ def get_bonus_for_bond_index(api_url, target_index):
         print(f"Ошибка при запросе: {e}")
         return None
 
-def get_user_bonds(telegram_id):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
 
-    bonds = cursor.execute("""
-    SELECT bond_index, target_bonus FROM user_bonds
-    WHERE telegram_id = ?
-    """, (telegram_id,)).fetchall()
+async def get_user_bonds(telegram_id):
+    async with aiosqlite.connect(DB_PATH) as conn:
+        cursor = await conn.execute("""
+        SELECT bond_index, target_bonus FROM user_bonds
+        WHERE telegram_id = ?
+        """, (telegram_id,))
+        bonds = await cursor.fetchall()
+        return bonds
 
-    conn.close()
-    return bonds
 
-def delete_user_bond(telegram_id, bond_index):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
+async def delete_user_bond(telegram_id, bond_index):
+    async with aiosqlite.connect(DB_PATH) as conn:
+        cursor = await conn.execute("""
+        DELETE FROM user_bonds WHERE telegram_id = ? AND bond_index = ?
+        """, (telegram_id, bond_index))
+        await conn.commit()
+        deleted = cursor.rowcount > 0
+        return deleted
 
-    cursor.execute("""
-    DELETE FROM user_bonds WHERE telegram_id = ? AND bond_index = ?
-    """, (telegram_id, bond_index))
 
-    conn.commit()
-    deleted = cursor.rowcount > 0
-    conn.close()
-    return deleted
-
-def get_all_bonds(api_url):
-    """
-    Получает список всех бондов из API.
-
-    :param api_url: str, URL API
-    :return: list, список бондов
-    """
+async def get_all_bonds(api_url):
     try:
-        response = requests.get(api_url)
-        response.raise_for_status()
-        data = response.json()
-        return data.get("bonds", [])
-    except requests.RequestException as e:
-        print(f"Ошибка при запросе API: {e}")
+        async with aiohttp.ClientSession() as session:
+            async with session.get(api_url) as response:
+                response.raise_for_status()
+                data = await response.json()
+                return data.get("bonds", [])
+    except Exception as e:
+        logger.error(f"Ошибка при запросе API: {e}")
         return []
