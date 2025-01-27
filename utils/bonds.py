@@ -1,4 +1,9 @@
+import sqlite3
+
 import requests
+
+from db.database import DB_PATH
+
 
 def get_bonus_for_bond_index(api_url, target_index):
     """
@@ -22,12 +27,43 @@ def get_bonus_for_bond_index(api_url, target_index):
         print(f"Ошибка при запросе: {e}")
         return None
 
-# Использование
-# api_url = "https://realtime-api.ape.bond/bonds"
-# index = 2015
-# bonus = get_bonus_for_bond_index(api_url, index)
-#
-# if bonus is not None:
-#     print(f"Бонус для бонда с индексом {index}: {bonus}")
-# else:
-#     print(f"Бонд с индексом {index} не найден или произошла ошибка.")
+def get_user_bonds(telegram_id):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    bonds = cursor.execute("""
+    SELECT bond_index, target_bonus FROM user_bonds
+    WHERE telegram_id = ?
+    """, (telegram_id,)).fetchall()
+
+    conn.close()
+    return bonds
+
+def delete_user_bond(telegram_id, bond_index):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    DELETE FROM user_bonds WHERE telegram_id = ? AND bond_index = ?
+    """, (telegram_id, bond_index))
+
+    conn.commit()
+    deleted = cursor.rowcount > 0
+    conn.close()
+    return deleted
+
+def get_all_bonds(api_url):
+    """
+    Получает список всех бондов из API.
+
+    :param api_url: str, URL API
+    :return: list, список бондов
+    """
+    try:
+        response = requests.get(api_url)
+        response.raise_for_status()
+        data = response.json()
+        return data.get("bonds", [])
+    except requests.RequestException as e:
+        print(f"Ошибка при запросе API: {e}")
+        return []

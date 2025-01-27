@@ -9,3 +9,5 @@ bot = Bot(token=BOT_API)
 dp = Dispatcher()
 
 CHANNELS = ["@g7team_ru"]
+
+BOND_API = "https://realtime-api.ape.bond/bonds"

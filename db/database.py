@@ -1,4 +1,5 @@
 import sqlite3
+import requests
 
 DB_PATH = "bot.db"
 
@@ -8,11 +9,12 @@ def init_db():
     cursor = conn.cursor()
 
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS users (
+    CREATE TABLE IF NOT EXISTS user_bonds (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        telegram_id INTEGER UNIQUE,
+        telegram_id INTEGER,
         bond_index INTEGER,
-        target_bonus REAL
+        target_bonus REAL,
+        UNIQUE(telegram_id, bond_index)
     )
     """)
     conn.commit()
@@ -24,7 +26,7 @@ def save_user_data(telegram_id, bond_index, target_bonus):
     cursor = conn.cursor()
 
     cursor.execute("""
-    INSERT OR REPLACE INTO users (telegram_id, bond_index, target_bonus)
+    INSERT OR REPLACE INTO user_bonds (telegram_id, bond_index, target_bonus)
     VALUES (?, ?, ?)
     """, (telegram_id, bond_index, target_bonus))
 
@@ -32,9 +34,8 @@ def save_user_data(telegram_id, bond_index, target_bonus):
     conn.close()
 
 
-def get_users_to_notify(api_url):
-    import requests
 
+def get_users_to_notify(api_url):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
