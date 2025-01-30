@@ -24,7 +24,7 @@ async def notify_users(api_url, bot: Bot):
         if notifications:
             for user_id, bond_index, bonus in notifications:
                 await bot.send_message(user_id, f"Бонд {bond_index} достиг бонуса {bonus}.")
-        await asyncio.sleep(600)
+        await asyncio.sleep(120)
 
 async def main():
     asyncio.create_task(notify_users(BOND_API, bot))
